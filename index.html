@@ -10,12 +10,13 @@
 <header><div class="top"><div><h1>⚡ 전기검침</h1><div class="subtitle">월별 지침 입력 · 전월 대비 사용량 자동 계산</div></div><button class="btn small" id="backupTop">백업/복원</button></div><div class="monthbar"><label for="month">검침 월</label><input id="month" type="month"></div></header>
 <main class="wrap"><section class="summary"><div class="stat"><div class="label">전체 항목</div><div class="value" id="totalCount">46</div></div><div class="stat"><div class="label">당월 입력</div><div class="value" id="doneCount">0/46</div></div><div class="stat"><div class="label">총 사용량</div><div class="value" id="totalUsage">—</div></div></section>
 <div class="tabrow"><button class="tab active" data-filter="all">전체 항목</button><button class="tab" data-filter="missing">당월 미입력</button><button class="tab" data-filter="done">당월 입력 완료</button></div>
-<div class="tools"><input id="search" type="search" placeholder="항목 또는 위치 검색"><button class="btn" id="saveBtn">저장</button></div>
+<div class="tools"><input id="search" type="search" placeholder="항목 또는 위치 검색"><button class="btn primary" id="addItemBtn">+ 항목 추가</button><button class="btn" id="saveBtn">저장</button></div>
 <div id="list"></div>
 <div class="bottomtools"><button class="btn" id="exportBtn">CSV 내보내기</button><button class="btn" id="backupBtn">백업 / 복원</button></div>
 <p class="hint">처음 사용할 때는 <b>전월 지침</b>과 <b>당월 지침</b>을 직접 입력하세요. 다음 달부터는 이전 달에 저장한 당월 지침이 전월 지침으로 자동 연결됩니다. 입력 내용은 이 기기의 브라우저에 저장됩니다. 브라우저 데이터 삭제 또는 기기 변경에 대비해 정기적으로 백업하세요.</p>
 </main>
 <div class="modalback" id="editModal"><div class="modal"><h2>검침 항목 수정</h2><p>항목명과 위치를 수정할 수 있습니다. 기존 월별 지침은 유지됩니다.</p><div class="editgrid"><div><label for="editName">항목명</label><input id="editName" autocomplete="off" placeholder="항목명 입력"></div><div><label for="editLocation">위치</label><input id="editLocation" autocomplete="off" placeholder="위치 입력 (선택)"></div></div><div class="modalactions"><button class="btn" id="cancelEdit">취소</button><button class="btn primary" id="saveEdit">수정 저장</button></div></div></div>
+<div class="modalback" id="addModal"><div class="modal"><h2>검침 항목 추가</h2><p>새 항목을 추가하면 현재 목록 맨 아래에 배치됩니다. 월별 지침은 새 항목에 대해 별도로 입력하면 됩니다.</p><div class="editgrid"><div><label for="addName">항목명</label><input id="addName" autocomplete="off" placeholder="항목명 입력"></div><div><label for="addLocation">위치</label><input id="addLocation" autocomplete="off" placeholder="위치 입력 (선택)"></div></div><div class="modalactions"><button class="btn" id="cancelAdd">취소</button><button class="btn primary" id="saveAdd">항목 추가</button></div></div></div>
 <div class="modalback" id="backupModal"><div class="modal"><h2>백업 / 복원</h2><p>백업 파일에는 항목 설정과 월별 검침값이 포함됩니다. 복원하면 현재 데이터가 백업 내용으로 교체됩니다.</p><div class="modalactions"><button class="btn primary" id="downloadBackup">백업 파일 저장</button><button class="btn" id="chooseRestore">백업 파일 불러오기</button><input type="file" id="restoreFile" accept=".json,application/json" hidden></div><p>또는 아래 JSON 내용을 복사해 보관할 수 있습니다.</p><textarea id="backupText" placeholder="백업 내용을 표시합니다"></textarea><div class="modalactions"><button class="btn" id="copyBackup">내용 복사</button><button class="btn" id="closeModal">닫기</button></div></div></div>
 <div class="toast" id="toast"></div>
 <script>
@@ -48,6 +49,11 @@ function closeEdit(){$('editModal').classList.remove('show');editingItemId=null}
 $('cancelEdit').addEventListener('click',closeEdit);
 $('editModal').addEventListener('click',e=>{if(e.target===$('editModal'))closeEdit()});
 $('saveEdit').addEventListener('click',()=>{const item=db.items.find(x=>x.id===editingItemId);if(!item)return;const name=$('editName').value.trim();if(!name){alert('항목명을 입력해주세요.');$('editName').focus();return}item.name=name;item.location=$('editLocation').value.trim();saveDB(false);closeEdit();toast('항목을 수정했어요.')});
+function closeAdd(){$('addModal').classList.remove('show');$('addName').value='';$('addLocation').value=''}
+$('addItemBtn').addEventListener('click',()=>{$('addModal').classList.add('show');setTimeout(()=>$('addName').focus(),50)});
+$('cancelAdd').addEventListener('click',closeAdd);
+$('addModal').addEventListener('click',e=>{if(e.target===$('addModal'))closeAdd()});
+$('saveAdd').addEventListener('click',()=>{const name=$('addName').value.trim();if(!name){alert('항목명을 입력해주세요.');$('addName').focus();return}const id=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():'item-'+Date.now()+'-'+Math.random().toString(36).slice(2,8);db.items.push({id,seq:db.items.length+1,name,location:$('addLocation').value.trim()});db.items.forEach((x,n)=>x.seq=n+1);saveDB(false);closeAdd();$('search').value='';filter='all';document.querySelectorAll('[data-filter]').forEach(x=>x.classList.toggle('active',x.dataset.filter==='all'));render();toast('새 항목을 추가했어요.')});
 $('list').addEventListener('click',e=>{
  const editBtn=e.target.closest('[data-edit]');
  if(editBtn){const item=db.items.find(x=>x.id===editBtn.dataset.edit);if(item)openEdit(item);return;}
